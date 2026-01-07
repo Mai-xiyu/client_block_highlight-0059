@@ -1,12 +1,3 @@
-// 核心：配置Forge插件仓库（解决插件找不到的问题）
-pluginManagement {
-    repositories {
-        maven { url = 'https://maven.minecraftforge.net/' }
-        gradlePluginPortal()
-        mavenCentral()
-    }
-}
-
 plugins {
     id 'eclipse'          // 可选：Eclipse IDE适配
     id 'idea'             // 可选：IDEA IDE适配
