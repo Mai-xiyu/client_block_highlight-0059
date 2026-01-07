@@ -9,6 +9,7 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents; // 新增导入
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -23,14 +24,13 @@ import java.util.Locale;
 
 @OnlyIn(Dist.CLIENT)
 public class BlockSelectorList extends AbstractSelectionList<BlockSelectorList.BlockEntry> {
-    
+
     private final Font font;
     private final List<BlockEntry> allEntries = new ArrayList<>();
-    
+
     public BlockSelectorList(Minecraft minecraft, int width, int height, int y0, int y1, int itemHeight, Font font) {
         super(minecraft, width, height, y0, y1, itemHeight);
         this.font = font;
-        // Ensure the list width is suitable for the content (320px wide centered)
         this.x0 = (width / 2) - 160;
         this.x1 = (width / 2) + 160;
         this.setRenderBackground(false);
@@ -42,38 +42,35 @@ public class BlockSelectorList extends AbstractSelectionList<BlockSelectorList.B
 
         // Load all registered blocks
         ForgeRegistries.BLOCKS.getValues().stream()
-            .filter(block -> block.asItem() instanceof BlockItem) // Only blocks that have items (for visual preview)
-            .forEach(block -> allEntries.add(new BlockEntry(this, block)));
-        
+                .filter(block -> block.asItem() instanceof BlockItem) // Only blocks that have items (for visual preview)
+                .forEach(block -> allEntries.add(new BlockEntry(this, block)));
+
         // Initial population
         this.replaceEntries(allEntries);
     }
-    
-    /**
-     * Implements multi-dimensional fuzzy search logic based on localized name or resource location ID.
-     */
+
     public void filter(String filter) {
         this.clearEntries();
         String lowerFilter = filter.toLowerCase(Locale.ROOT);
-        
+
         if (lowerFilter.isBlank()) {
             this.replaceEntries(allEntries);
             return;
         }
 
         List<BlockEntry> filtered = allEntries.stream()
-            .filter(entry -> 
-                entry.getLocalizedName().getString().toLowerCase(Locale.ROOT).contains(lowerFilter) ||
-                entry.getId().toString().toLowerCase(Locale.ROOT).contains(lowerFilter)
-            )
-            .toList();
-            
+                .filter(entry ->
+                        entry.getLocalizedName().getString().toLowerCase(Locale.ROOT).contains(lowerFilter) ||
+                                entry.getId().toString().toLowerCase(Locale.ROOT).contains(lowerFilter)
+                )
+                .toList();
+
         this.replaceEntries(filtered);
     }
-    
+
     @Override
     public int getRowWidth() {
-        return 320; 
+        return 320;
     }
 
     @Override
@@ -81,19 +78,15 @@ public class BlockSelectorList extends AbstractSelectionList<BlockSelectorList.B
         return this.x1 + 6;
     }
 
-    // Fix 1: Implement missing abstract method updateNarration
     @Override
-    protected void updateNarration(NarrationElementOutput narrationElementOutput) {
-        BlockEntry selected = this.getSelected();
-        if (selected != null) {
-            narrationElementOutput.add(NarratedElementType.TITLE, Component.translatable("gui.narrate.selected", selected.getNarration()));
+    public void updateNarration(NarrationElementOutput output) {
+        if (this.getSelected() != null) {
+            this.getSelected().updateNarration(output);
         }
-        this.addEntryInformation(narrationElementOutput);
     }
 
-    
     // --- Block Entry Class ---
-    
+
     @OnlyIn(Dist.CLIENT)
     public class BlockEntry extends AbstractSelectionList.Entry<BlockEntry> {
         private final BlockSelectorList parent;
@@ -101,7 +94,7 @@ public class BlockSelectorList extends AbstractSelectionList<BlockSelectorList.B
         private final ResourceLocation id;
         private final ItemStack itemStack;
         private final Component localizedName;
-        
+
         private final int configuredColor; // RRGGBB
 
         public BlockEntry(BlockSelectorList parent, Block block) {
@@ -110,80 +103,68 @@ public class BlockSelectorList extends AbstractSelectionList<BlockSelectorList.B
             this.id = ForgeRegistries.BLOCKS.getKey(block);
             this.itemStack = block.asItem().getDefaultInstance();
             this.localizedName = block.getName();
-            
-            // Check config manager for existing highlight color
+
             Integer color = BlockColorManager.getColorForBlock(block.defaultBlockState());
-            this.configuredColor = color != null ? color : -1; // -1 indicates not configured
+            this.configuredColor = color != null ? color : -1;
         }
-        
+
         public ResourceLocation getId() { return id; }
         public Component getLocalizedName() { return localizedName; }
 
-        @Override
-        public Component getNarration() {
-            return Component.translatable("narrator.select", this.localizedName);
+        public void updateNarration(NarrationElementOutput output) {
+            output.add(NarratedElementType.TITLE, Component.translatable("narrator.select", this.localizedName));
         }
 
         @Override
         public void render(GuiGraphics guiGraphics, int index, int top, int left, int width, int height, int mouseX, int mouseY, boolean isMouseOver, float partialTick) {
             Minecraft mc = Minecraft.getInstance();
-            
-            // Fix 2: Use getGameTime() and cast to float
             float time = (mc.level != null ? (float) mc.level.getGameTime() : 0) + partialTick;
-            
-            // Dynamic hover/selection effect (simulating fluid transition)
+
             float scaleAdjustment = 1.0F;
             int textAlpha = 0xFF;
 
             if (isMouseOver) {
-                scaleAdjustment = 1.0F + Mth.sin(time / 5.0F) * 0.02F; // Subtle pulsation on hover
-                guiGraphics.fill(left, top, left + width, top + height, 0x20FFFFFF); // Soft white background highlight
+                scaleAdjustment = 1.0F + Mth.sin(time / 5.0F) * 0.02F;
+                guiGraphics.fill(left, top, left + width, top + height, 0x20FFFFFF);
             }
 
-            // Vertical centering offsets
             int itemX = left + 4;
             int itemY = top + 2;
             int textX = left + 35;
             int textY_Top = top + 5;
             int textY_Bottom = top + 18;
 
-            // 1. Block Preview (Item Icon as proxy for 3D visual)
             guiGraphics.pose().pushPose();
-            
-            // Apply dynamic scaling based on hover/time
+
             float scaledSize = 1.5F * scaleAdjustment;
-            guiGraphics.pose().translate(itemX + 12 * (1 - scaleAdjustment), itemY + 12 * (1 - scaleAdjustment), 0); // Center translation adjustment
-            guiGraphics.pose().scale(scaledSize, scaledSize, scaledSize); 
-            
-            // Fix 3: Use GuiGraphics.renderItem
+            guiGraphics.pose().translate(itemX + 12 * (1 - scaleAdjustment), itemY + 12 * (1 - scaleAdjustment), 0);
+            guiGraphics.pose().scale(scaledSize, scaledSize, scaledSize);
+
             guiGraphics.renderItem(itemStack, 0, 0);
-            
+
             guiGraphics.pose().popPose();
 
-            // 2. Localized Name (Right side, Primary)
             int primaryColor = 0xFFFFFF | (textAlpha << 24);
             guiGraphics.drawString(parent.font, this.localizedName, textX, textY_Top, primaryColor, false);
 
-            // 3. Resource ID (Secondary, lower, grayed out)
             int secondaryColor = 0x808080 | (textAlpha << 24);
             guiGraphics.drawString(parent.font, this.id.toString(), textX, textY_Bottom, secondaryColor, false);
-            
-            // 4. Highlight Indicator / Configuration Status (Right edge)
+
             if (configuredColor != -1) {
-                // Draw a colored square indicating the configured color
-                int colorX = left + width - 15; 
+                int colorX = left + width - 15;
                 int colorY = top + 10;
-                // Add alpha to the configured RRGGBB color for rendering (using 0xFF alpha)
                 guiGraphics.fill(colorX, colorY, colorX + 10, colorY + 10, 0xFF000000 | configuredColor);
             }
         }
-        
+
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            // TODO: Implement logic to select block for configuration/color setting
             if (button == 0) {
-                System.out.println("Selected block for configuration: " + id);
-                // Returning true consumes the click
+                // 修复：直接使用 Minecraft.getInstance().screen 获取当前屏幕作为父屏幕
+                Minecraft.getInstance().setScreen(new EditBlockHighlightScreen(Minecraft.getInstance().screen, this.block, this.id));
+
+                // 播放点击音效
+                Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
                 return true;
             }
             return false;
