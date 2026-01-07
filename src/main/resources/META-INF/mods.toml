@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[40,)"
+license="MIT"
+
+[[mods]]
+modId="client_block_highlight"
+version="${mod_version}"
+displayName="客户端方块高亮"
+description='''${mod_description}'''
+authors="${mod_authors}"
+
+[[dependencies."client_block_highlight"]]
+    modId="forge"
+    mandatory=true
+    versionRange="[40,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies."client_block_highlight"]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
