@@ -55,6 +55,12 @@ minecraft {
 // 资源目录：包含生成的资源（数据生成用）
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
+// 【关键修复】添加项目级依赖仓库（pluginManagement仅管插件，项目依赖需单独配置）
+repositories {
+    maven { url = 'https://maven.minecraftforge.net/' } // Forge核心依赖仓库
+    mavenCentral() // 基础依赖仓库
+}
+
 // 依赖配置
 dependencies {
     // Forge核心依赖（版本读取自gradle.properties）
