@@ -1,9 +1,121 @@
-plugins {
-    id 'net.minecraftforge.gradle' version '6.0.+'
+// 核心：配置Forge插件仓库（解决插件找不到的问题）
+pluginManagement {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net/' }
+        gradlePluginPortal()
+        mavenCentral()
+    }
 }
 
+plugins {
+    id 'eclipse'          // 可选：Eclipse IDE适配
+    id 'idea'             // 可选：IDEA IDE适配
+    id 'java'             // 必需：Java项目核心插件
+    // FG6版本范围（匹配1.20.1，避免模糊版本6.0.+）
+    id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
+}
+
+// 从gradle.properties读取基础配置（无硬编码）
 version = project.mod_version
 group = project.mod_group_id
 archivesBaseName = project.mod_id
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+// Java 17配置（MC1.20+必需）
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
+
+// Forge核心配置块
+minecraft {
+    // 映射文件：使用官方映射，版本读取自gradle.properties
+    mappings channel: 'official', version: project.minecraft_version
+
+    // IDE运行时自动复制资源（必需）
+    copyIdeResources = true
+
+    // 运行配置（客户端/服务端测试）
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+            // 日志配置（调试用）
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            // 关联当前模组源码
+            mods {
+                "${project.mod_id}" {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        // 客户端运行配置
+        client {
+            property 'forge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        // 服务端运行配置
+        server {
+            property 'forge.enabledGameTestNamespaces', project.mod_id
+            args '--nogui'
+        }
+    }
+}
+
+// 资源目录：包含生成的资源（数据生成用）
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+// 依赖配置
+dependencies {
+    // Forge核心依赖（版本读取自gradle.properties）
+    minecraft "net.minecraftforge:forge:${project.minecraft_version}-${project.forge_version}"
+}
+
+// 处理资源文件（扩展mods.toml/pack.mcmeta中的变量）
+tasks.named('processResources', ProcessResources).configure {
+    // 从gradle.properties读取所有需要替换的变量
+    def replaceProperties = [
+        // Minecraft & Forge版本
+        minecraft_version: project.minecraft_version,
+        minecraft_version_range: project.minecraft_version_range,
+        forge_version: project.forge_version,
+        forge_version_range: project.forge_version_range,
+        loader_version_range: project.loader_version_range,
+        // 模组身份信息
+        mod_id: project.mod_id,
+        mod_name: project.mod_name,
+        mod_license: project.mod_license,
+        mod_version: project.mod_version,
+        mod_group_id: project.mod_group_id,
+        mod_authors: project.mod_authors,
+        mod_description: project.mod_description
+    ]
+
+    inputs.properties replaceProperties
+
+    // 扩展mods.toml和pack.mcmeta中的变量
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties + [project: project]
+    }
+}
+
+// Jar包配置（生成合法的模组Jar）
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes([
+            "Specification-Title": project.mod_id,
+            "Specification-Vendor": project.mod_authors,
+            "Specification-Version": "1",
+            "Implementation-Title": project.name,
+            "Implementation-Version": project.jar.archiveVersion,
+            "Implementation-Vendor": project.mod_authors,
+            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+    // 重混淆Jar（Forge模组必需，确保在游戏中正常运行）
+    finalizedBy 'reobfJar'
+}
+
+// 编码配置（避免中文乱码）
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
