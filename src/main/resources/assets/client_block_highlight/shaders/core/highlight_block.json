@@ -1,17 +1,19 @@
 {
-  "vertex": "highlight_block",
-  "fragment": "highlight_block",
+  "vertex": "client_block_highlight:highlight_block",
+  "fragment": "client_block_highlight:highlight_block",
   "primitive": "quad",
   "cull": "back",
   "sort": "translucent",
   "texture": [],
-  "parameters": [
-    { "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "value": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
-    { "name": "ProjMat", "type": "matrix4x4", "count": 16, "value": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
-    { "name": "GameTime", "type": "float", "count": 1, "value": 0.0 }
+  "uniforms": [
+    { "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+    { "name": "ProjMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+    { "name": "GameTime", "type": "float", "count": 1, "values": [ 0.0 ] },
+    { "name": "LastUpdateTime", "type": "float", "count": 1, "values": [ -100.0 ] }
   ],
   "attributes": [
     "Position",
-    "Color"
+    "Color",
+    "Normal"
   ]
 }
