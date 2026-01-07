@@ -13,49 +13,87 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.io.IOException;
+import java.util.OptionalDouble;
 
 @Mod.EventBusSubscriber(modid = ClientBlockHighlight.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ShaderManager {
     private static ShaderInstance highlightShader;
-    
-    // Define custom RenderType using the shader
-    public static final RenderType BLOCK_HIGHLIGHT_TRANSLUCENT = RenderType.create(
-            "block_highlight_translucent", 
-            DefaultVertexFormat.POSITION_COLOR, 
-            VertexFormat.Mode.QUADS, 
-            256, 
-            true, // Use query
-            true, // Use sort
-            RenderType.CompositeState.builder()
-                    .setShaderState(new RenderStateShard.ShaderStateShard(() -> highlightShader))
-                    // FIX: Use public static final fields suffixed with _STATE
-                    .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY_STATE)
-                    .setCullState(RenderStateShard.NO_CULL_STATE)
-                    // Use LEQUAL depth test to allow depth sorting but prevent Z-fighting artifacts
-                    .setDepthTestState(RenderStateShard.LEQUAL_DEPTH_TEST_STATE)
-                    .setWriteMaskState(RenderStateShard.COLOR_WRITE_STATE)
-                    .createCompositeState(true)
-    );
+    private static float lastUpdateTime = -1000.0f;
+
+    private static float getShaderTime() {
+        return (float) (System.currentTimeMillis() % 3600000) / 1000.0F;
+    }
+
+    public static void triggerUpdateAnimation() {
+        lastUpdateTime = getShaderTime();
+    }
+
+    private static class CustomRenderType extends RenderType {
+        private CustomRenderType(String name, VertexFormat format, VertexFormat.Mode mode, int bufferSize, boolean affectsCrumbling, boolean sortOnUpload, Runnable setupState, Runnable clearState) {
+            super(name, format, mode, bufferSize, affectsCrumbling, sortOnUpload, setupState, clearState);
+        }
+
+        // 1. 填充块 (透视 + 扫描线着色器)
+        public static final RenderType BLOCK_HIGHLIGHT_TRANSLUCENT = RenderType.create(
+                "block_highlight_translucent",
+                DefaultVertexFormat.POSITION_COLOR_NORMAL,
+                VertexFormat.Mode.QUADS,
+                256,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(new RenderStateShard.ShaderStateShard(() -> highlightShader))
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setCullState(NO_CULL)
+                        .setDepthTestState(NO_DEPTH_TEST) // 穿墙关键
+                        .setWriteMaskState(COLOR_WRITE)
+                        .createCompositeState(false)
+        );
+
+        // 2. 线条 (透视 + 原版着色器 + 必须带法线)
+        public static final RenderType BLOCK_HIGHLIGHT_LINE = RenderType.create(
+                "block_highlight_line",
+                DefaultVertexFormat.POSITION_COLOR_NORMAL, // <--- 修复：改为 NORMAL
+                VertexFormat.Mode.LINES,
+                256,
+                false,
+                false,
+                RenderType.CompositeState.builder()
+                        .setShaderState(RENDERTYPE_LINES_SHADER)
+                        .setLineState(new RenderStateShard.LineStateShard(OptionalDouble.of(3.0D)))
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setCullState(NO_CULL)
+                        .setDepthTestState(NO_DEPTH_TEST) // 穿墙关键
+                        .setWriteMaskState(COLOR_WRITE)
+                        .createCompositeState(false)
+        );
+    }
+
+    public static final RenderType BLOCK_HIGHLIGHT_TRANSLUCENT = CustomRenderType.BLOCK_HIGHLIGHT_TRANSLUCENT;
+    public static final RenderType BLOCK_HIGHLIGHT_LINE = CustomRenderType.BLOCK_HIGHLIGHT_LINE;
 
     @SubscribeEvent
     public static void registerShaders(RegisterShadersEvent event) throws IOException {
         event.registerShader(
                 new ShaderInstance(
-                        event.getResourceProvider(), 
-                        new ResourceLocation(ClientBlockHighlight.MOD_ID, "highlight_block"), 
-                        DefaultVertexFormat.POSITION_COLOR),
+                        event.getResourceProvider(),
+                        new ResourceLocation(ClientBlockHighlight.MOD_ID, "highlight_block"),
+                        DefaultVertexFormat.POSITION_COLOR_NORMAL),
                 shaderInstance -> highlightShader = shaderInstance
         );
     }
 
     public static void updateShaderUniforms() {
         if (highlightShader == null) return;
-        
-        // Update GameTime for dynamic effects in VSH
+
+        float currentTime = getShaderTime();
+
         if (highlightShader.getUniform("GameTime") != null) {
-            float gameTime = (float) (System.currentTimeMillis() % 100000) / 1000.0F;
-            highlightShader.getUniform("GameTime").set(gameTime);
+            highlightShader.getUniform("GameTime").set(currentTime);
         }
-        // Note: ModelViewMat and ProjMat are typically managed by the rendering pipeline for this RenderType.
+
+        if (highlightShader.getUniform("LastUpdateTime") != null) {
+            highlightShader.getUniform("LastUpdateTime").set(lastUpdateTime);
+        }
     }
 }
