@@ -1,11 +1,15 @@
-// settings.gradle - 仅这里能放pluginManagement块
 pluginManagement {
     repositories {
-        maven { url = 'https://maven.minecraftforge.net/' } // Forge插件仓库
         gradlePluginPortal()
-        mavenCentral()
+        maven {
+            name = 'MinecraftForge'
+            url = 'https://maven.minecraftforge.net/'
+        }
     }
 }
 
-// 项目名称（需和模组ID一致，可选）
-rootProject.name = 'client_block_highlight'
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.7.0'
+}
+
+rootProject.name = 'CLIEANAT'
