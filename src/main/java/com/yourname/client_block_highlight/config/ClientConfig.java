@@ -39,18 +39,24 @@ public class ClientConfig {
             ForgeRegistries.BLOCKS.getKey(Blocks.ANCIENT_DEBRIS).toString() + "|6F4A0C" // 远古残骸 (深棕色)
         );
 
-        MINERAL_COLORS = builder
+        // FIX: Use explicit casting and suppress warnings to resolve generic incompatibility with defineList
+        @SuppressWarnings("unchecked")
+        ForgeConfigSpec.ConfigValue<List<String>> mineralColorsTemp = (ForgeConfigSpec.ConfigValue<List<String>>) builder
                 .comment("List of specific blocks to highlight (Block ID | RRGGBB). Higher priority than tags.")
                 .defineList("mineralHighlights", defaultMinerals, obj -> obj instanceof String && ((String) obj).contains("|") && ((String) obj).split("\\|")[1].length() == 6);
+        MINERAL_COLORS = mineralColorsTemp;
 
         // Custom Tag Definitions (Tag ID | RRGGBB hex color)
         List<String> defaultTags = List.of(
             "minecraft:needs_iron_tool|FF00FF" // Example: Blocks needing iron tool highlighted in magenta
         );
 
-        TAG_COLORS = builder
+        // FIX: Use explicit casting and suppress warnings to resolve generic incompatibility with defineList
+        @SuppressWarnings("unchecked")
+        ForgeConfigSpec.ConfigValue<List<String>> tagColorsTemp = (ForgeConfigSpec.ConfigValue<List<String>>) builder
                 .comment("List of Block Tags to highlight (Tag ID | RRGGBB). Lower priority than specific block IDs.")
                 .defineList("tagHighlights", defaultTags, obj -> obj instanceof String && ((String) obj).contains("|") && ((String) obj).split("\\|")[1].length() == 6);
+        TAG_COLORS = tagColorsTemp;
 
         CLIENT_SPEC = builder.build();
     }
