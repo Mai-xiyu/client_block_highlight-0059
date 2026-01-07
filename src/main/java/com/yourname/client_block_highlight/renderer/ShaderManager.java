@@ -28,11 +28,12 @@ public class ShaderManager {
             true, // Use sort
             RenderType.CompositeState.builder()
                     .setShaderState(new RenderStateShard.ShaderStateShard(() -> highlightShader))
-                    .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
-                    .setCullState(RenderStateShard.NO_CULL)
+                    // FIX: Use public static final fields suffixed with _STATE
+                    .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY_STATE)
+                    .setCullState(RenderStateShard.NO_CULL_STATE)
                     // Use LEQUAL depth test to allow depth sorting but prevent Z-fighting artifacts
-                    .setDepthTestState(RenderStateShard.LEQUAL_DEPTH_TEST)
-                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
+                    .setDepthTestState(RenderStateShard.LEQUAL_DEPTH_TEST_STATE)
+                    .setWriteMaskState(RenderStateShard.COLOR_WRITE_STATE)
                     .createCompositeState(true)
     );
 
