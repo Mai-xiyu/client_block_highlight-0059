@@ -1,0 +1,17 @@
+{
+  "vertex": "highlight_block",
+  "fragment": "highlight_block",
+  "primitive": "quad",
+  "cull": "back",
+  "sort": "translucent",
+  "texture": [],
+  "parameters": [
+    { "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "value": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+    { "name": "ProjMat", "type": "matrix4x4", "count": 16, "value": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+    { "name": "GameTime", "type": "float", "count": 1, "value": 0.0 }
+  ],
+  "attributes": [
+    "Position",
+    "Color"
+  ]
+}
