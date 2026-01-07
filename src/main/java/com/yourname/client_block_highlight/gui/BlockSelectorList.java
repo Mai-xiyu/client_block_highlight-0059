@@ -5,6 +5,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSelectionList;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -79,6 +81,16 @@ public class BlockSelectorList extends AbstractSelectionList<BlockSelectorList.B
         return this.x1 + 6;
     }
 
+    // Fix 1: Implement missing abstract method updateNarration
+    @Override
+    protected void updateNarration(NarrationElementOutput narrationElementOutput) {
+        BlockEntry selected = this.getSelected();
+        if (selected != null) {
+            narrationElementOutput.add(NarratedElementType.TITLE, Component.translatable("gui.narrate.selected", selected.getNarration()));
+        }
+        this.addEntryInformation(narrationElementOutput);
+    }
+
     
     // --- Block Entry Class ---
     
@@ -116,8 +128,8 @@ public class BlockSelectorList extends AbstractSelectionList<BlockSelectorList.B
         public void render(GuiGraphics guiGraphics, int index, int top, int left, int width, int height, int mouseX, int mouseY, boolean isMouseOver, float partialTick) {
             Minecraft mc = Minecraft.getInstance();
             
-            // Calculate time offset for fluid animations
-            float time = (mc.level != null ? mc.level.getTime() : 0) + partialTick;
+            // Fix 2: Use getGameTime() and cast to float
+            float time = (mc.level != null ? (float) mc.level.getGameTime() : 0) + partialTick;
             
             // Dynamic hover/selection effect (simulating fluid transition)
             float scaleAdjustment = 1.0F;
@@ -143,7 +155,8 @@ public class BlockSelectorList extends AbstractSelectionList<BlockSelectorList.B
             guiGraphics.pose().translate(itemX + 12 * (1 - scaleAdjustment), itemY + 12 * (1 - scaleAdjustment), 0); // Center translation adjustment
             guiGraphics.pose().scale(scaledSize, scaledSize, scaledSize); 
             
-            mc.getItemRenderer().renderAndDecorateItem(itemStack, 0, 0);
+            // Fix 3: Use GuiGraphics.renderItem
+            guiGraphics.renderItem(itemStack, 0, 0);
             
             guiGraphics.pose().popPose();
 
